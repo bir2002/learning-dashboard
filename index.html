@@ -95,6 +95,14 @@ function planCard(dn,b){const rec=PLAN.days[dn-1],name=PLAN.blocks[b],t=rec.t[b]
     <a target="_blank" rel="noopener" href="${notesU(t,'Learning/365 Plan/')}">📖 Notes</a>
     <button onclick="quizP(${dn},${b})">📝 Quiz</button></div></div>
   <div class="hour"><b>${fmtMin(60)}</b>study</div></div>`;}
+function chessCard(day){const k='chess-'+day;
+ return `<div class="block ${pstate.done[k]?'done':''}">
+  <div class="chk" onclick="togP('${k}')">${pstate.done[k]?'✓':''}</div>
+  <div><div class="h3" style="color:var(--gold)">♟ Daily Habit</div><div class="topic">Chess Practice</div>
+   <div class="focus">30 min — work through the playlist, then play a game or solve puzzles.</div>
+   <div class="res"><a target="_blank" rel="noopener" href="https://www.youtube.com/playlist?list=PLQKBpQZcRycrvUUxLdVmlfMChJS0S5Zw0">▶ Playlist</a>
+    <a href="${notesU('Chess Practice','Learning/Habits/')}">📖 Notes</a></div></div>
+  <div class="hour"><b>30 min</b>study</div></div>`;}
 /* ---- render ---- */
 function setMode(m){mode=m;if(m=='plan'&&pday==null)pday=planDay();
  for(const x of ['plan','subj'])document.getElementById('m-'+x).classList.toggle('on',m==x);
@@ -134,6 +142,7 @@ function render(){
    doneN=[0,1,2,3].filter(b=>pstate.done[cd+'-'+b]).length;totN=4;leftMin=0;
    document.getElementById('s-done-l').textContent='blocks done (this day)';
   }
+  html+=chessCard(pday);const _ck='chess-'+pday;totN+=1;if(pstate.done[_ck])doneN+=1;
   let all=0;for(let dd=1;dd<=365;dd++)if([0,1,2,3].every(b=>pstate.done[dd+'-'+b]))all++;
   const sdone=SKILL.filter((_,i)=>ds[i]).length;
   foot.innerHTML=`<span>Start date (Day 1):</span><input type="date" value="${pstate.start}" onchange="setStart(this.value)"><span>${sdone}/${SKILL.length} skills &middot; ${all}/365 curriculum days done</span>`;
