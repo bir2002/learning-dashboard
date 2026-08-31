@@ -74,7 +74,7 @@ function skillCard(i){const b=SKILL[i];return `<div class="block ${ds[i]?'done':
    <div class="res"><a target="_blank" rel="noopener" href="${ytLec(b.topic,b.vid)}">▶ Lecture</a><span class="len">${b.dur||'—'}</span>
     <a href="${notesU(b.topic,'Learning/Skills/')}">📖 Notes</a>
     <button onclick="quizS(${i})">📝 Quiz</button></div></div>
-  <div class="hour"><b>${b.sh}h</b>study</div></div>`;}
+  <div class="hour"><b>${Math.round(b.sh*60)} min</b>study</div></div>`;}
 function planCard(dn,b){const rec=PLAN.days[dn-1],name=PLAN.blocks[b],t=rec.t[b]||'—',v=(rec.v&&rec.v[b])||'',k=dn+'-'+b;
  return `<div class="block ${pstate.done[k]?'done':''}">
   <div class="chk" onclick="togP('${k}')">${pstate.done[k]?'✓':''}</div>
@@ -82,7 +82,7 @@ function planCard(dn,b){const rec=PLAN.days[dn-1],name=PLAN.blocks[b],t=rec.t[b]
    <div class="res"><a target="_blank" rel="noopener" href="${ytLec(t,v)}">▶ Lecture</a>
     <a target="_blank" rel="noopener" href="${notesU(t,'Learning/365 Plan/')}">📖 Notes</a>
     <button onclick="quizP(${dn},${b})">📝 Quiz</button></div></div>
-  <div class="hour"><b>1h</b>study</div></div>`;}
+  <div class="hour"><b>60 min</b>study</div></div>`;}
 /* ---- render ---- */
 function setMode(m){mode=m;if(m=='plan'&&pday==null)pday=planDay();
  for(const x of ['sprint','plan','subj'])document.getElementById('m-'+x).classList.toggle('on',m==x);
