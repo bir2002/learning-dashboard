@@ -74,6 +74,7 @@ try{firebase.initializeApp(FB);fbRef=firebase.database().ref('progress');setSync
 }catch(e){setSync('');}
 function cloudPush(){if(!fbRef)return;setSync('☁ saving…');clearTimeout(pushT2);pushT2=setTimeout(()=>{lts=Date.now();fbRef.set({skills:ds,plan:pstate,ts:lts}).then(()=>setSync('☁ synced')).catch(()=>setSync('☁ offline'));},400);}
 function mins(s){if(!s)return 0;const p=s.split(':').map(Number);return p.length==3?p[0]*60+p[1]:p[0];}
+function fmtMin(m){m=Math.round(m);if(m<60)return m+' min';const h=Math.floor(m/60),r=m%60;return r?h+'h '+r+'m':h+'h';}
 function ytLec(t,v){return v?('https://www.youtube.com/watch?v='+v):('https://www.youtube.com/results?search_query='+encodeURIComponent(t+' lecture tutorial'));}
 function safe(t){return t.replace(/[\\/:*?"<>|]/g,'-').replace(/[#^\[\]]/g,'').replace(/\s+/g,' ').trim();}
 function notesU(t,folder){return 'obsidian://open?vault=LearningVault&file='+encodeURIComponent(folder+safe(t));}
@@ -85,7 +86,7 @@ function skillCard(i){const b=SKILL[i];return `<div class="block ${ds[i]?'done':
    <div class="res"><a target="_blank" rel="noopener" href="${ytLec(b.topic,b.vid)}">▶ Lecture</a><span class="len">${b.dur||'—'}</span>
     <a href="${notesU(b.topic,'Learning/Skills/')}">📖 Notes</a>
     <button onclick="quizS(${i})">📝 Quiz</button></div></div>
-  <div class="hour"><b>${Math.round(b.sh*60)} min</b>study</div></div>`;}
+  <div class="hour"><b>${fmtMin(b.sh*60)}</b>study</div></div>`;}
 function planCard(dn,b){const rec=PLAN.days[dn-1],name=PLAN.blocks[b],t=rec.t[b]||'—',v=(rec.v&&rec.v[b])||'',k=dn+'-'+b;
  return `<div class="block ${pstate.done[k]?'done':''}">
   <div class="chk" onclick="togP('${k}')">${pstate.done[k]?'✓':''}</div>
@@ -93,7 +94,7 @@ function planCard(dn,b){const rec=PLAN.days[dn-1],name=PLAN.blocks[b],t=rec.t[b]
    <div class="res"><a target="_blank" rel="noopener" href="${ytLec(t,v)}">▶ Lecture</a>
     <a target="_blank" rel="noopener" href="${notesU(t,'Learning/365 Plan/')}">📖 Notes</a>
     <button onclick="quizP(${dn},${b})">📝 Quiz</button></div></div>
-  <div class="hour"><b>60 min</b>study</div></div>`;}
+  <div class="hour"><b>${fmtMin(60)}</b>study</div></div>`;}
 /* ---- render ---- */
 function setMode(m){mode=m;if(m=='plan'&&pday==null)pday=planDay();
  for(const x of ['plan','subj'])document.getElementById('m-'+x).classList.toggle('on',m==x);
@@ -121,7 +122,7 @@ function render(){
    const idx=SKILL.map((b,i)=>i).filter(i=>SKILL[i].day==pday);
    const dm=SKILL.filter(x=>x.day==pday),mm=Math.round(dm.reduce((a,x)=>a+x.sh*60,0));
    const alldone=idx.length&&idx.every(i=>ds[i]);
-   html+=`<div class="grp"><span>📆 Day ${pday} of ${TOT} — ⚡ Skill Sprint${alldone?' ✓':''}</span><span class="h">${planDateStr(pday)} &middot; ${mm} min</span></div>`;
+   html+=`<div class="grp"><span>📆 Day ${pday} of ${TOT} — ⚡ Skill Sprint${alldone?' ✓':''}</span><span class="h">${planDateStr(pday)} &middot; ${fmtMin(mm)}</span></div>`;
    idx.forEach(i=>html+=skillCard(i));
    doneN=idx.filter(i=>ds[i]).length;totN=idx.length;leftMin=idx.reduce((a,i)=>a+(ds[i]?0:mins(SKILL[i].dur)),0);
    document.getElementById('s-done-l').textContent='modules done (day)';
