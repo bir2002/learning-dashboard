@@ -45,6 +45,8 @@ input[type=number],input[type=date]{background:var(--card2);color:var(--txt);bor
 </div>
 <div class="tabs" id="pager"></div>
 <div class="bar">
+ <div class="stat"><b id="s-total">0%</b><span id="s-total-l">total complete<div class="prog"><i id="s-total-prog"></i></div></span></div>
+ <div class="stat"><b id="s-streak">0</b><span>🔥 day streak</span></div>
  <div class="stat"><b id="s-done">0</b><span id="s-done-l">done</span></div>
  <div class="stat"><b id="s-min">0</b><span>lecture min (this view)</span></div>
  <div class="stat"><b id="s-pct">0%</b><span id="s-pct-l">complete<div class="prog"><i id="s-prog"></i></div></span></div>
@@ -59,17 +61,17 @@ const D={"SKILL": [{"subject": "Finance & Accounting", "group": "Tally (Accounti
 const KS='master_v2',KP='learn365';
 let ds=JSON.parse(localStorage.getItem(KS)||'{}');           // skills: index->true
 let pstate=JSON.parse(localStorage.getItem(KP)||'{}');       // plan: {done:{}, start}
-if(!pstate.done)pstate.done={};if(!pstate.start)pstate.start=new Date().toISOString().slice(0,10);
+if(!pstate.done)pstate.done={};if(!pstate.start)pstate.start=new Date().toISOString().slice(0,10);if(!pstate.act)pstate.act={};
 let mode='plan',filter=SUBJ[0],pday=null;
 function saveS(){localStorage.setItem(KS,JSON.stringify(ds));}
 function saveP(){localStorage.setItem(KP,JSON.stringify(pstate));}
 /* ---- cloud sync (Firebase RTDB, real-time across devices) ---- */
 const FB={apiKey:"AIzaSyCU8tSQKYdp3wWdQkzTUs6L9o1CZTGwShk",authDomain:"learning-dash-80060.firebaseapp.com",databaseURL:"https://learning-dash-80060-default-rtdb.firebaseio.com",projectId:"learning-dash-80060",appId:"1:943134636323:web:a0bcb92ad4b3f5fbc5f496"};
-let fbRef=null,lts=0,pushT2=null;
+let fbRef=null,lts=0,pushT2=null,synced0=false;
 function setSync(t){const e=document.getElementById('sync');if(e)e.textContent=t;}
 try{firebase.initializeApp(FB);fbRef=firebase.database().ref('progress');setSync('☁ connecting…');
  fbRef.on('value',s=>{const v=s.val();setSync('☁ synced');
-  if(v&&v.ts&&v.ts>lts){lts=v.ts;ds=v.skills||{};pstate=v.plan||{done:{}};if(!pstate.done)pstate.done={};if(!pstate.start)pstate.start=new Date().toISOString().slice(0,10);saveS();saveP();if(pday!=null)render();}},
+  if(v&&v.ts&&v.ts>lts){lts=v.ts;ds=v.skills||{};pstate=v.plan||{done:{}};if(!pstate.done)pstate.done={};if(!pstate.start)pstate.start=new Date().toISOString().slice(0,10);if(!pstate.act)pstate.act={};saveS();saveP();if(!synced0){synced0=true;pday=nextDay();}if(pday!=null)render();}},
   ()=>setSync('☁ offline'));
 }catch(e){setSync('');}
 function cloudPush(){if(!fbRef)return;setSync('☁ saving…');clearTimeout(pushT2);pushT2=setTimeout(()=>{lts=Date.now();fbRef.set({skills:ds,plan:pstate,ts:lts}).then(()=>setSync('☁ synced')).catch(()=>setSync('☁ offline'));},400);}
@@ -79,6 +81,17 @@ function ytLec(t,v){return v?('https://www.youtube.com/watch?v='+v):('https://ww
 function safe(t){return t.replace(/[\\/:*?"<>|]/g,'-').replace(/[#^\[\]]/g,'').replace(/\s+/g,' ').trim();}
 function notesU(t,folder){return 'obsidian://open?vault=LearningVault&file='+encodeURIComponent(folder+safe(t));}
 function planDay(){const s=new Date(pstate.start+'T00:00:00'),n=new Date();return Math.min(TOT,Math.max(1,Math.floor((n-s)/86400000)+1));}
+/* ---- total completion, streak, resume-by-progress ---- */
+const NG=SKILL.length+365*PLAN.blocks.length+TOT;   // every checkable goal: skills + curriculum blocks + chess days
+function goalsDone(){return Object.keys(ds).length+Object.keys(pstate.done).length;}
+function dayComplete(d){
+ if(d<=ND){const idx=SKILL.map((b,i)=>i).filter(i=>SKILL[i].day==d);return idx.length>0&&idx.every(i=>ds[i]);}
+ const cd=d-ND;return [0,1,2,3].every(b=>pstate.done[cd+'-'+b]);}
+function nextDay(){for(let d=1;d<=TOT;d++)if(!dayComplete(d))return d;return TOT;} // first unfinished day, not today's date
+function markToday(){const d=new Date().toISOString().slice(0,10);if(!pstate.act)pstate.act={};pstate.act[d]=1;}
+function streak(){if(!pstate.act)return 0;let n=0,d=new Date();
+ if(!pstate.act[d.toISOString().slice(0,10)])d.setDate(d.getDate()-1); // today not done yet? still show the run through yesterday
+ for(;;){if(pstate.act[d.toISOString().slice(0,10)]){n++;d.setDate(d.getDate()-1);}else break;}return n;}
 /* ---- cards ---- */
 function skillCard(i){const b=SKILL[i];return `<div class="block ${ds[i]?'done':''}">
   <div class="chk" onclick="togS(${i})">${ds[i]?'✓':''}</div>
@@ -104,7 +117,7 @@ function chessCard(day){const k='chess-'+day;
     <a href="${notesU('Chess Practice','Learning/Habits/')}">📖 Notes</a></div></div>
   <div class="hour"><b>30 min</b>study</div></div>`;}
 /* ---- render ---- */
-function setMode(m){mode=m;if(m=='plan'&&pday==null)pday=planDay();
+function setMode(m){mode=m;if(m=='plan'&&pday==null)pday=nextDay();
  for(const x of ['plan','subj'])document.getElementById('m-'+x).classList.toggle('on',m==x);
  render();window.scrollTo(0,0);}
 function setF(t){filter=t;render();}
@@ -123,7 +136,7 @@ function render(){
  } else { /* merged full plan: days 1..ND = skill sprint, ND+1..TOT = 365 curriculum */
   pager.style.display='flex';
   pager.innerHTML=`<button class="nav" onclick="goPlan(${pday-1})">← Prev</button>
-   <button class="nav primary" onclick="goPlan(planDayNow())">Today</button>
+   <button class="nav primary" onclick="goPlan(nextDay())">↻ Resume</button>
    <button class="nav" onclick="goPlan(${pday+1})">Next →</button>
    <span style="color:var(--dim)">Jump</span><input type="number" min="1" max="${TOT}" value="${pday}" style="width:80px" onchange="goPlan(parseInt(this.value))">`;
   if(pday<=ND){
@@ -152,14 +165,19 @@ function render(){
  document.getElementById('s-min').textContent=Math.round(leftMin);
  pct=totN?Math.round(doneN/totN*100):0;
  document.getElementById('s-pct').textContent=pct+'%';document.getElementById('s-prog').style.width=pct+'%';
+ const gd=goalsDone(),gp=NG?Math.round(gd/NG*100):0;
+ document.getElementById('s-total').textContent=gp+'%';
+ document.getElementById('s-total-prog').style.width=gp+'%';
+ document.getElementById('s-total-l').firstChild.textContent=gd+' / '+NG+' goals ';
+ document.getElementById('s-streak').textContent=streak();
 }
 function planDayNow(){return planDay();}
 function planDateStr(dn){const s=new Date(pstate.start+'T00:00:00');s.setDate(s.getDate()+dn-1);return s.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'});}
 function setStart(v){pstate.start=v;saveP();cloudPush();render();}
 /* ---- toggles ---- */
-function togS(i){ds[i]=!ds[i];if(!ds[i])delete ds[i];saveS();cloudPush();render();}
-function togP(k){pstate.done[k]=!pstate.done[k];if(!pstate.done[k])delete pstate.done[k];saveP();cloudPush();render();}
-function hardReset(){if(confirm('Reset ALL progress (skills + 365)?')){ds={};pstate={done:{},start:pstate.start};saveS();saveP();cloudPush();render();}}
+function togS(i){const wc=mode=='plan'?dayComplete(pday):true;ds[i]=!ds[i];if(ds[i])markToday();else delete ds[i];saveS();cloudPush();if(mode=='plan'&&!wc&&dayComplete(pday))pday=nextDay();render();}
+function togP(k){const wc=mode=='plan'?dayComplete(pday):true;pstate.done[k]=!pstate.done[k];if(pstate.done[k])markToday();else delete pstate.done[k];saveP();cloudPush();if(mode=='plan'&&!wc&&dayComplete(pday))pday=nextDay();render();}
+function hardReset(){if(confirm('Reset ALL progress (skills + 365)?')){ds={};pstate={done:{},start:pstate.start,act:{}};pday=nextDay();saveS();saveP();cloudPush();render();}}
 /* ---- quiz ---- */
 function showQuiz(title,sub,bodyHtml){document.getElementById('modal').innerHTML=`<span class="closex" onclick="closeQuiz()">&times;</span><h2>${title}</h2><div class="mt">${sub}</div>${bodyHtml}`;document.getElementById('mask').classList.add('on');}
 function mcq(list){return list.map((q,qi)=>`<div class="q"><div class="qt">${qi+1}. ${q.q}</div>`+
@@ -181,5 +199,5 @@ function pick(el,qi,oi,ans){const opts=el.parentNode.querySelectorAll('.opt');op
  document.getElementById('exp-'+qi).classList.add('show');}
 function closeQuiz(){document.getElementById('mask').classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeQuiz();});
-pday=planDay();render();
+pday=nextDay();render();
 </script></body></html>
